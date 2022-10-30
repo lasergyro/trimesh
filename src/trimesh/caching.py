@@ -138,7 +138,7 @@ def cache_decorator(function):
         value = function(*args, **kwargs)
         # store the value
         if self._cache.force_immutable and hasattr(
-                value, 'flags') and len(value.shape) > 0:
+                value, 'flags') and hasattr(value,'shape') and type(value.shape)==tuple and len(value.shape) > 0:
             value.flags.writeable = False
 
         self._cache.cache[name] = value

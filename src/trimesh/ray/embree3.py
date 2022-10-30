@@ -53,13 +53,13 @@ def _add_mesh(mesh, slot, device, scene):
 
 class RayMeshIntersector(RayParent):
 
-    def __init__(self, geometry):
+    def __init__(self, mesh):
         """
         Do ray- mesh queries.
 
         Parameters
         -------------
-        geometry : Trimesh object
+        mesh : Trimesh object
           Mesh to do ray tests on
         scale_to_box : bool
           If true, will scale mesh to approximate
@@ -67,20 +67,20 @@ class RayMeshIntersector(RayParent):
           large or small meshes.
         """
 
-        self.geometry = geometry
+        self.mesh = mesh
 
     def _build(self):
         """
         Generate the embree objects.
         """
-        if getattr(self, '_geometry_hash', None) == hash(self.geometry):
+        if getattr(self, '_geometry_hash', None) == hash(self.mesh):
             return
         
         self._device = embree.Device()
         self._scene = self._device.make_scene()
 
         # add the mesh to the embree scene
-        _add_mesh(mesh=self.geometry,
+        _add_mesh(mesh=self.mesh,
                   slot=0,
                   device=self._device,
                   scene=self._scene)
@@ -96,29 +96,53 @@ class RayMeshIntersector(RayParent):
                       return_locations=False):
 
         self._build()
-        # inherits docstring from parent
-        origins = np.asanyarray(origins, dtype=np.float32)
-        vectors = np.asanyarray(vectors, dtype=np.float32)
 
-        assert origins.shape == vectors.shape
+        try:
+          # inherits docstring from parent
+          origins = np.asanyarray(origins, dtype=np.float32)
+          vectors = np.asanyarray(vectors, dtype=np.float32)
 
-        rayhit = embree.RayHit1M(len(origins))
-        rayhit.org[:] = origins
-        rayhit.dir[:] = vectors
+          assert origins.shape == vectors.shape
 
-        rayhit.tnear[:] = 0
-        rayhit.tfar[:] = np.inf
-        rayhit.flags[:] = 0
-        rayhit.geom_id[:] = embree.INVALID_GEOMETRY_ID
+          rayhit = embree.RayHit1M(len(origins))
+          rayhit.org[:] = origins
+          rayhit.dir[:] = vectors
 
-        context = embree.IntersectContext()
-        self._scene.intersect1M(context, rayhit)
+          rayhit.id[:] = np.arange(len(origins))
+          rayhit.tnear[:] = 0
+          rayhit.tfar[:] = np.inf
+          rayhit.flags[:] = 0
+          rayhit.geom_id[:] = embree.INVALID_GEOMETRY_ID
 
-        # self._scene.release()
-        # self._device.release()
-        from IPython import embed
-        embed()
+          context = embree.IntersectContext()
+          self._scene.intersect1M(context, rayhit)
 
-        # make sure to copy all return values
-        # otherwise things sure get segfaulty
-        return np.array(rayhit.prim_id, dtype=np.int64)
+          
+          geom_id=np.array(rayhit.geom_id, dtype=np.int64)
+          tri_id=np.array(rayhit.prim_id, dtype=np.int64)
+          ray_id=np.array(rayhit.id, dtype=np.int64)
+
+          sel=geom_id!=embree.INVALID_GEOMETRY_ID
+          
+          
+          tri_id=tri_id[sel]
+          ray_id=ray_id[sel]
+          # make sure to copy all return values
+          # otherwise things sure get segfaulty
+          if return_locations:
+
+            tfar=np.array(rayhit.tfar, dtype=np.int64)[sel]
+
+            return (
+              tri_id,
+              ray_id,
+              vectors[sel]*tfar[...,None]+origins[sel]
+              )
+          else:
+            return (
+              tri_id,
+              ray_id,
+              )
+        finally:
+          self._scene.release()
+          self._device.release()

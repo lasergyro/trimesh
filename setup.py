@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 
+from importlib.util import find_spec
 import os
 import sys
 from setuptools import setup
 
+from setuptools import setup, find_packages
+
+
 # load __version__ without importing anything
 version_file = os.path.join(
     os.path.dirname(__file__),
-    'trimesh/version.py')
+    'src/trimesh/version.py')
 with open(version_file, 'r') as f:
     # use eval to get a clean string of version from file
     __version__ = eval(f.read().strip().split('=')[-1])
@@ -30,7 +34,7 @@ requirements_easy = set([
     'lxml',      # handle XML better and faster than built- in XML
     'pyglet',    # render preview windows nicely
     'shapely',   # handle 2D polygons robustly
-    'rtree',     # create N-dimension trees for broad-phase queries
+    'prtree',     # create N-dimension trees for broad-phase queries
     'svg.path',  # handle SVG format path strings
     'sympy',     # do analytical math
     'msgpack',   # serialize into msgpack
@@ -113,7 +117,7 @@ def format_all():
         subprocess.check_call(flake)
 
     # run on our target locations
-    for t in ['trimesh', 'tests', 'examples']:
+    for t in ['src', 'tests', 'examples']:
         run_on(t)
 
 
@@ -156,23 +160,25 @@ setup(name='trimesh',
           'Programming Language :: Python :: 3.10',
           'Natural Language :: English',
           'Topic :: Scientific/Engineering'],
-      packages=[
-          'trimesh',
-          'trimesh.ray',
-          'trimesh.path',
-          'trimesh.path.exchange',
-          'trimesh.scene',
-          'trimesh.voxel',
-          'trimesh.visual',
-          'trimesh.viewer',
-          'trimesh.exchange',
-          'trimesh.resources',
-          'trimesh.interfaces'],
-      package_data={'trimesh': ['resources/templates/*',
-                                'resources/*.json',
-                                'resources/schema/*',
-                                'resources/schema/primitive/*.json',
-                                'resources/*.zip']},
+      packages=find_packages('src'),
+      package_dir={'':'src'},
+    #   packages=[
+    #       'trimesh',
+    #       'trimesh.ray',
+    #       'trimesh.path',
+    #       'trimesh.path.exchange',
+    #       'trimesh.scene',
+    #       'trimesh.voxel',
+    #       'trimesh.visual',
+    #       'trimesh.viewer',
+    #       'trimesh.exchange',
+    #       'trimesh.resources',
+    #       'trimesh.interfaces'],
+    #   package_data={'trimesh': ['resources/templates/*',
+    #                             'resources/*.json',
+    #                             'resources/schema/*',
+    #                             'resources/schema/primitive/*.json',
+    #                             'resources/*.zip']},
       install_requires=list(requirements_default),
       extras_require={'test': list(requirements_test),
                       'easy': list(requirements_easy),

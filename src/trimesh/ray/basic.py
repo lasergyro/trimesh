@@ -73,8 +73,8 @@ def triangle_id(
       Ray direction vectors
     triangles_normal : (n, 3) float
       Normal vector of triangles, optional
-    tree : rtree.Index
-      Rtree object holding triangle bounds
+    tree : PRTree
+      PRTree object holding triangle bounds
 
     Returns
     -----------
@@ -95,7 +95,7 @@ def triangle_id(
         tree = triangles_mod.bounds_tree(triangles)
 
     # find the list of likely triangles and which ray they
-    # correspond with, via rtree queries
+    # correspond with, via prtree queries
     candidates, ids = ray_triangle_candidates(
         origins=origins,
         vectors=vectors,
@@ -194,7 +194,7 @@ def ray_triangle_candidates(origins, vectors, tree):
       Ray origin points
     vectors : (m, 3) float
       Ray direction vectors
-    tree : rtree.Index
+    tree : PRTree
        Contains AABB of each triangle
 
     Returns
@@ -211,7 +211,7 @@ def ray_triangle_candidates(origins, vectors, tree):
     ids = [[]] * len(origins)
 
     for i, bounds in enumerate(bounding):
-        candidates[i] = np.array(list(tree.intersection(bounds)),
+        candidates[i] = np.array(list(tree.query(bounds)),
                                  dtype=np.int64)
         ids[i] = np.ones(len(candidates[i]), dtype=np.int64) * i
 

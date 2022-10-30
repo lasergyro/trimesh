@@ -48,9 +48,9 @@ def nearby_faces(mesh, points):
         raise ValueError('points must be (n,3)!')
 
     # an r-tree containing the axis aligned bounding box for every triangle
-    rtree = mesh.triangles_tree
+    tree = mesh.triangles_tree
     # a kd-tree containing every vertex of the mesh
-    kdtree = cKDTree(mesh.vertices[mesh.referenced_vertices])
+    kdtree=mesh.vertices_tree
 
     # query the distance to the nearest vertex to get AABB of a sphere
     distance_vertex = kdtree.query(points)[0].reshape((-1, 1))
@@ -61,9 +61,9 @@ def nearby_faces(mesh, points):
                               points + distance_vertex))
 
     # faces that intersect axis aligned bounding box
-    candidates = [list(rtree.intersection(b)) for b in bounds]
+    candidate_c,candidate_i=tree.batch_query_array(bounds)
 
-    return candidates
+    return candidate_c,candidate_i
 
 
 def closest_point_naive(mesh, points):
@@ -143,16 +143,13 @@ def closest_point(mesh, points):
         raise ValueError('points must be (n,3)!')
 
     # do a tree- based query for faces near each point
-    candidates = nearby_faces(mesh, points)
+    num_candidates,all_candidates = nearby_faces(mesh, points)
     # view triangles as an ndarray so we don't have to recompute
     # the MD5 during all of the subsequent advanced indexing
     triangles = mesh.triangles.view(np.ndarray)
 
     # create the corresponding list of triangles
     # and query points to send to the closest_point function
-    all_candidates = np.concatenate(candidates)
-
-    num_candidates = list(map(len, candidates))
     tile_idxs = np.repeat(np.arange(len(points)), num_candidates)
     query_point = points[tile_idxs, :]
 
@@ -169,6 +166,7 @@ def closest_point(mesh, points):
 
     # get best two candidate indices by arg-sorting the per-query_distances
     qds = np.array_split(query_distance, query_group)
+    print(f"{len(qds)}=")
     idxs = np.int32([qd.argsort()[:2] if len(qd) > 1 else [0, 0] for qd in qds])
     idxs[1:] += query_group.reshape(-1, 1)
 

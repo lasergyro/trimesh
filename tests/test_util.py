@@ -51,7 +51,7 @@ class UtilTests(unittest.TestCase):
                 t = g.np.random.random((1000, 3, dimension))
                 bounds = g.np.column_stack((t.min(axis=1), t.max(axis=1)))
                 tree = g.trimesh.util.bounds_tree(bounds)
-                self.assertTrue(0 in tree.intersection(bounds[0]))
+                self.assertTrue(0 in tree.query(bounds[0]))
 
     def test_stack(self):
         # shortcut to the function

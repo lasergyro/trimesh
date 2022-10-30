@@ -251,11 +251,11 @@ class BoundsTest(g.unittest.TestCase):
                                   for i in range(10)]])
             tree = g.trimesh.util.bounds_tree(bounds)
             for i, b in enumerate(bounds):
-                assert i in set(tree.intersection(b.ravel()))
+                assert i in set(tree.query(b.ravel()))
             # construct tree with per-row bounds
             tree = g.trimesh.util.bounds_tree(bounds.reshape((-1, dimension * 2)))
             for i, b in enumerate(bounds):
-                assert i in set(tree.intersection(b.ravel()))
+                assert i in set(tree.query(b.ravel()))
 
 
 if __name__ == '__main__':

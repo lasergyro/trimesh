@@ -4,7 +4,6 @@ from .. import util
 from .. import bounds
 from .. import constants
 
-
 @constants.log_time
 def contains_points(intersector,
                     points,

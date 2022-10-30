@@ -331,7 +331,7 @@ def bounds_tree(triangles):
 
     Returns
     ---------
-    tree : rtree.Rtree
+    tree : PRTree
       One node per triangle
     """
     triangles = np.asanyarray(triangles, dtype=np.float64)

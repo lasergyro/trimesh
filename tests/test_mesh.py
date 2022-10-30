@@ -93,7 +93,7 @@ class MeshTests(g.unittest.TestCase):
             assert sample.shape == (1000, 3)
             g.log.info('finished testing meshes')
 
-            # make sure vertex kdtree and triangles rtree exist
+            # make sure vertex kdtree and triangles prtree exist
 
             t = mesh.kdtree
             assert hasattr(t, 'query')

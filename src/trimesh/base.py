@@ -87,7 +87,7 @@ class Trimesh(Geometry3D):
         use_embree : bool
           If True try to use pyembree raytracer.
           If pyembree is not available it will automatically fall
-          back to a much slower rtree/numpy implementation
+          back to a much slower prtree/numpy implementation
         initial_cache : dict
           A way to pass things to the cache in case expensive
           things were calculated before creating the mesh object.
@@ -789,11 +789,22 @@ class Trimesh(Geometry3D):
 
         Returns
         ----------
-        tree : rtree.index
+        tree : PRTree
           Each triangle in self.faces has a rectangular cell
         """
         tree = triangles.bounds_tree(self.triangles)
         return tree
+    @caching.cache_decorator
+    def vertices_tree(self):
+        """
+        A KDTree containing vertices in the mesh
+
+        Returns
+        -------
+        tree : KDTree
+        """
+        from scipy.spatial import cKDTree
+        return cKDTree(self.vertices[self.referenced_vertices])
 
     @caching.cache_decorator
     def triangles_center(self):
@@ -2926,7 +2937,7 @@ class Trimesh(Geometry3D):
 
         Returns
         --------
-        tree: rtree.index
+        tree: PRTree
           Where each edge in self.face_adjacency has a
           rectangular cell
         """

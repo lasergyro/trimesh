@@ -24,7 +24,7 @@ except BaseException as E:
     from ..exceptions import ExceptionModule
     nx = ExceptionModule(E)
 try:
-    from rtree import Rtree
+    from python_prtree import PRTree2D
 except BaseException as E:
     # create a dummy module which will raise the ImportError
     from ..exceptions import closure
@@ -53,7 +53,7 @@ def enclosure_tree(polygons):
        Edges indicate a polygon is
        contained by another polygon
     """
-    tree = Rtree()
+    tree = PRTree2D()
     # nodes are indexes in polygons
     contains = nx.DiGraph()
     for i, polygon in enumerate(polygons):
@@ -61,7 +61,7 @@ def enclosure_tree(polygons):
         # failed due to weird geometry so ignore it
         if polygon is None or len(polygon.bounds) != 4:
             continue
-        # insert polygon bounds into rtree
+        # insert polygon bounds into prtree
         tree.insert(i, polygon.bounds)
         # make sure every valid polygon has a node
         contains.add_node(i)
@@ -70,7 +70,7 @@ def enclosure_tree(polygons):
     for i in contains.nodes():
         polygon = polygons[i]
         # we first query for bounding box intersections from the R-tree
-        for j in tree.intersection(polygon.bounds):
+        for j in tree.query(polygon.bounds):
             # if we are checking a polygon against itself continue
             if (i == j):
                 continue

@@ -117,7 +117,7 @@ def local_voxelize(mesh,
                              point + (radius + 0.5) * pitch))
 
     # faces that intersect axis aligned bounding box
-    faces = list(mesh.triangles_tree.intersection(bounds))
+    faces = list(mesh.triangles_tree.query(bounds))
 
     # didn't hit anything so exit
     if len(faces) == 0:

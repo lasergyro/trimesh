@@ -1726,11 +1726,11 @@ def bounds_tree(bounds):
 
     Returns
     ---------
-    tree : Rtree
+    tree : PRtree
       Tree containing bounds by index
     """
-    # rtree is a soft dependency
-    import rtree
+    # python_prtree is a soft dependency
+    from python_prtree import PRTree2D,PRTree3D
 
     # make sure we've copied bounds
     bounds = np.array(bounds, dtype=np.float64, copy=True)
@@ -1749,28 +1749,14 @@ def bounds_tree(bounds):
         raise ValueError('Bounds must be (n,dimension*2)!')
     dimension = int(dimension / 2)
 
-    # some versions of rtree screw up indexes on stream loading
-    # do a test here so we know if we are free to use stream loading
-    # or if we have to do a loop to insert things which is 5x slower
-    rtree_test = rtree.index.Index(
-        [(1564, [0, 0, 0, 10, 10, 10], None)],
-        properties=rtree.index.Property(dimension=3))
-    rtree_stream_ok = next(rtree_test.intersection(
-        [1, 1, 1, 2, 2, 2])) == 1564
-
-    properties = rtree.index.Property(dimension=dimension)
-    if rtree_stream_ok:
-        # stream load was verified working on import above
-        tree = rtree.index.Index(zip(np.arange(len(bounds)),
-                                     bounds,
-                                     [None] * len(bounds)),
-                                 properties=properties)
+    if dimension==2:
+        kls=PRTree2D
+    elif dimension==3:
+        kls=PRTree3D
     else:
-        # in some rtree versions stream loading goofs the index
-        log.warning('rtree stream loading broken! Try upgrading rtree!')
-        tree = rtree.index.Index(properties=properties)
-        for i, b in enumerate(bounds):
-            tree.insert(i, b)
+        raise ValueError
+    tree = kls(np.arange(len(bounds),dtype=int),bounds)
+
     return tree
 
 
