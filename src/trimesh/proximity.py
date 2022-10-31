@@ -166,7 +166,6 @@ def closest_point(mesh, points):
 
     # get best two candidate indices by arg-sorting the per-query_distances
     qds = np.array_split(query_distance, query_group)
-    print(f"{len(qds)}=")
     idxs = np.int32([qd.argsort()[:2] if len(qd) > 1 else [0, 0] for qd in qds])
     idxs[1:] += query_group.reshape(-1, 1)
 
