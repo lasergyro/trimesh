@@ -115,7 +115,40 @@ def closest_point_naive(mesh, points):
     distance = np.array([g[i] for i, g in zip(triangle_id, distance_2)]) ** .5
 
     return closest, distance, triangle_id
+import numba
 
+@numba.njit(cache=True,parallel=False)
+def _get_idxs(query_distance,num_candidates):
+  r = np.empty((num_candidates.shape[0],2),dtype=num_candidates.dtype)
+  cs = np.cumsum(num_candidates)
+  for i in numba.prange(len(num_candidates)):
+    c=num_candidates[i]
+    if c<2:
+      r[i]=0,0
+      continue
+    q=0
+    k=cs[i]-c
+    for j in range(c):
+      ci=k+j
+      d=query_distance[ci]
+      if q==0:
+        r[i,0]=ci
+        q=1
+      elif q==1:
+        if query_distance[r[i,0]]>d:
+          r[i,1]=r[i,0]
+          r[i,0]=ci
+        else:
+          r[i,1]=ci
+        q=2
+      elif q==2:
+        if query_distance[r[i,0]]>d:
+          r[i,1]=r[i,0]
+          r[i,0]=ci
+        elif query_distance[r[i,1]]>d:
+          r[i,1]=ci
+    assert q==2
+  return r  
 
 def closest_point(mesh, points):
     """
@@ -157,7 +190,7 @@ def closest_point(mesh, points):
 
     # do the computation for closest point
     query_close = _corresponding(query_tri, query_point)
-    query_group = np.cumsum(num_candidates)[:-1]
+    # query_group = np.cumsum(num_candidates)[:-1]
 
     # vectors and distances for
     # closest point to query point
@@ -165,9 +198,15 @@ def closest_point(mesh, points):
     query_distance = util.diagonal_dot(query_vector, query_vector)
 
     # get best two candidate indices by arg-sorting the per-query_distances
-    qds = np.array_split(query_distance, query_group)
-    idxs = np.int32([qd.argsort()[:2] if len(qd) > 1 else [0, 0] for qd in qds])
-    idxs[1:] += query_group.reshape(-1, 1)
+    # qds = np.array_split(query_distance, query_group)
+    # print(f"{len(qds)=},{type(qds)=}")
+    idxs=_get_idxs(query_distance,num_candidates)
+
+    # idxs = np.int32([qd.argsort()[:2] if len(qd) > 1 else [0, 0] for qd in qds])
+
+    # idxs[1:] += query_group.reshape(-1, 1)
+
+
 
     # points, distances and triangle ids for best two candidates
     two_points = query_close[idxs]

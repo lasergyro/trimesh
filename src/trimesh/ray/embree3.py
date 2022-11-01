@@ -124,15 +124,12 @@ class RayMeshIntersector(RayParent):
 
           sel=geom_id!=embree.INVALID_GEOMETRY_ID
           
-          
           tri_id=tri_id[sel]
           ray_id=ray_id[sel]
           # make sure to copy all return values
           # otherwise things sure get segfaulty
           if return_locations:
-
-            tfar=np.array(rayhit.tfar, dtype=np.int64)[sel]
-
+            tfar=np.array(rayhit.tfar, dtype=origins.dtype)[sel]
             return (
               tri_id,
               ray_id,

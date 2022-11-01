@@ -1,31 +1,38 @@
+from trimesh.base import Trimesh
+
+
 try:
     from . import generic as g
 except BaseException:
     import generic as g
 
-
+kwargs_set=[
+    {'use_embree': True},
+    # {'use_embree': False},
+    ]
 class RayTests(g.unittest.TestCase):
 
     def test_rays(self):
-        meshes = [g.get_mesh(**k)
-                  for k in g.data['ray_data']['load_kwargs']]
-        rays = g.data['ray_data']['rays']
-        names = [m.metadata['file_name'] for m in meshes]
+        for kwargs in kwargs_set:
+            meshes = [g.get_mesh(**k,**kwargs)
+                    for k in g.data['ray_data']['load_kwargs']]
+            rays = g.data['ray_data']['rays']
+            names = [m.metadata['file_name'] for m in meshes]
 
-        hit_id = []
-        hit_loc = []
-        hit_any = []
-        for m in meshes:
-            name = m.metadata['file_name']
-            hit_any.append(m.ray.intersects_any(**rays[name]))
-            hit_loc.append(m.ray.intersects_location(**rays[name])[0])
-            hit_id.append(m.ray.intersects_id(**rays[name]))
-        hit_any = g.np.array(hit_any, dtype=g.np.int64)
+            hit_id = []
+            hit_loc = []
+            hit_any = []
+            for m in meshes:
+                name = m.metadata['file_name']
+                hit_any.append(m.ray.intersects_any(**rays[name]))
+                hit_loc.append(m.ray.intersects_location(**rays[name])[0])
+                hit_id.append(m.ray.intersects_id(**rays[name]))
+            hit_any = g.np.array(hit_any, dtype=g.np.int64)
 
-        for i in g.trimesh.grouping.group(
-                g.np.unique(names, return_inverse=True)[1]):
-            broken = hit_any[i].astype(g.np.int64).ptp(axis=0).sum()
-            assert broken == 0
+            for i in g.trimesh.grouping.group(
+                    g.np.unique(names, return_inverse=True)[1]):
+                broken = hit_any[i].astype(g.np.int64).ptp(axis=0).sum()
+                assert broken == 0
 
     def test_rps(self, count=50000):
         # do a rudimentary benchmark
@@ -66,10 +73,9 @@ class RayTests(g.unittest.TestCase):
         """
         Test queries with no hits
         """
-        for use_embree in [True, False]:
+        for kwargs in kwargs_set:
             dimension = (100, 3)
-            sphere = g.get_mesh('unit_sphere.STL',
-                                use_embree=use_embree)
+            sphere = g.get_mesh('unit_sphere.STL',**kwargs)
             # should never hit the sphere
             origins = g.np.random.random(dimension)
             vectors = g.np.tile([0, 1, 0], (dimension[0], 1))
@@ -87,8 +93,8 @@ class RayTests(g.unittest.TestCase):
 
     def test_contains(self):
         scale = 1.5
-        for use_embree in [True, False]:
-            mesh = g.get_mesh('unit_cube.STL', use_embree=use_embree)
+        for kwargs in kwargs_set:
+            mesh = g.get_mesh('unit_cube.STL', **kwargs)
             g.log.info('Contains test ray engine: ' + str(mesh.ray.__class__))
 
             test_on = mesh.ray.contains_points(mesh.vertices)  # NOQA
@@ -108,8 +114,8 @@ class RayTests(g.unittest.TestCase):
             assert test_centroid.all()
 
     def test_on_vertex(self):
-        for use_embree in [True, False]:
-            m = g.trimesh.primitives.Box(use_embree=False)
+        for kwargs in kwargs_set:
+            m = g.trimesh.primitives.Box(**kwargs)
 
             origins = g.np.zeros_like(m.vertices)
             vectors = m.vertices.copy()
@@ -128,8 +134,8 @@ class RayTests(g.unittest.TestCase):
             assert (hit_count == 1).all()
 
     def test_on_edge(self):
-        for use_embree in [True, False]:
-            m = g.get_mesh('7_8ths_cube.stl')
+        for kwargs in kwargs_set:
+            m = g.get_mesh('7_8ths_cube.stl',**kwargs)
 
             points = [[4.5, 0, -23], [4.5, 0, -2], [0, 0, -1e-6], [0, 0, -1]]
             truth = [False, True, True, True]
@@ -180,18 +186,19 @@ class RayTests(g.unittest.TestCase):
 
     def test_contain_single(self):
         # not watertight
-        mesh = g.get_mesh("teapot.stl", use_embree=False)
+        for use_embree in [True, False]:
+            mesh = g.get_mesh("teapot.stl", use_embree=use_embree)
 
-        # sample a grid of points (n,3)
-        points = mesh.bounding_box.sample_grid(step=2.0)
-        # to a contains check on every point
-        contained = mesh.ray.contains_points(points)
+            # sample a grid of points (n,3)
+            points = mesh.bounding_box.sample_grid(step=2.0)
+            # to a contains check on every point
+            contained = mesh.ray.contains_points(points)
 
-        assert len(points) == len(contained)
+            assert len(points) == len(contained)
 
-        # not contained and should surface a bug
-        for point in mesh.bounding_box.vertices:
-            mesh.ray.contains_points([point])
+            # not contained and should surface a bug
+            for point in mesh.bounding_box.vertices:
+                mesh.ray.contains_points([point])
 
     def test_box(self):
         """
@@ -199,10 +206,10 @@ class RayTests(g.unittest.TestCase):
         ray origin XY.
         """
 
-        for kwargs in [{'use_embree': True},
-                       {'use_embree': False}]:
+        for kwargs in kwargs_set:
 
             mesh = g.get_mesh('unit_cube.STL', **kwargs)
+            assert isinstance(mesh,Trimesh)
             # grid is across meshes XY profile
             origins = g.trimesh.util.grid_linspace(mesh.bounds[:, :2] +
                                                    g.np.reshape(
@@ -238,8 +245,7 @@ class RayTests(g.unittest.TestCase):
             vectors = g.np.array([[-0.13590759, -0.98042506, 0.],
                                   [0.13590759, 0.98042506, -0.]])
 
-            for kwargs in [{'use_embree': True},
-                           {'use_embree': False}]:
+            for kwargs in kwargs_set:
                 mesh = g.get_mesh('broken.STL', **kwargs)
 
                 locations, index_ray, index_tri = mesh.ray.intersects_location(
